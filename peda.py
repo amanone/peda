@@ -4257,6 +4257,38 @@ class PEDACmd(object):
         return
 
     # writemem()
+    def patchinstruction(self, *arg):
+        """
+        Patch memory start at an address with instructions unsing NASM
+        Usage:
+            MYNAME address archi "instruction"
+            MYNAME (will patch at current $pc)
+        """
+        (address, asmcode, archi) = normalize_argv(arg, 3)
+        address = to_int(address)
+        if address is None:
+            address = peda.getreg("pc")
+
+        if archi is None:
+            archi = 64 # xxx: getarch ?
+
+        if asmcode is None:
+            asmcode = ""
+            while True:
+                line = raw_input("patchinstruction> ")
+                if line == "end":
+                    break
+                asmcode = line;
+                msg("translated to \"%s\", enter 'end' to accept" % to_hexstr(Nasm.assemble(asmcode, archi)))
+
+        raw_byte = Nasm.assemble(asmcode, archi)
+        bytes = peda.writemem(address, raw_byte)
+        if bytes >= 0:
+            msg("Written %d bytes \"%s\" to 0x%x" % (bytes, to_hexstr(raw_byte), address))
+        else:
+            warning_msg("Failed to patch memory, try 'set write on' first for offline patching")
+        return
+
     def patch(self, *arg):
         """
         Patch memory start at an address with string/hexstring/int
